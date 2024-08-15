@@ -18,6 +18,12 @@ const sound_click = new Sound([1,.5]);
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
+    // create a table of all sprites
+    spriteAtlas =
+    {
+        circle:  tile(0),
+        square:   tile(2),
+    };
 
     cameraPos = vec2(16,8);
 
