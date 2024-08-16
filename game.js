@@ -11,6 +11,7 @@
 const sound_click = new Sound([1,.5]);
 
 // game variables
+let isMouse = true;
 
 // webgl can be disabled to save even more space
 //glEnable = false;

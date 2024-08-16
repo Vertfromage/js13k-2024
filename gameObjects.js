@@ -71,6 +71,7 @@ class Chain extends GameObject {
     this.health = 0;
     this.isGameObject = 1;
     this.damageTimer = new Timer();
+    this.isPlayer = false;
 
     // initialize the array of beads
     this.beads = initBeads()
@@ -95,7 +96,48 @@ class Chain extends GameObject {
 
   update() {
     super.update();
-    // has an array of beads, loop through giving previous position of head/bead ahead of it.
+
+    if (this.isPlayer) {
+        this.updatePlayerMovement();
+      } else {
+        this.updateAutomatedMovement();
+      }
+  
+      // Update bead positions based on the chain's movement
+      this.updateBeadPositions();
+  }
+
+  updatePlayerMovement() {
+    let direction;
+    if (this.isMouse) {
+      // Follow mouse/touch input
+      direction = mousePos.sub(this.pos).normalize();
+    } else {
+      // Use keyboard/gamepad input
+      let moveInput = isUsingGamepad
+        ? gamepadStick(0)
+        : vec2(keyIsDown('ArrowRight') - keyIsDown('ArrowLeft'), 
+               keyIsDown('ArrowUp') - keyIsDown('ArrowDown'));
+      direction = moveInput.normalize();
+    }
+
+    // Move the head based on direction and speed
+    this.pos = this.pos.add(direction.mul(speed));
+  }
+
+  updateAutomatedMovement() {
+    // Example AI: Move the chain in a circle or towards a target => needs work
+    let targetPos = vec2(Math.cos(time) * 10, Math.sin(time) * 10);
+    this.pos = this.pos.lerp(targetPos, 0.05);  // Gradual movement towards the target
+  }
+
+  updateBeadPositions() {
+    for (let i = this.beads.length - 1; i > 0; i--) {
+      // Each bead follows the position of the bead ahead of it
+      this.beads[i].pos = this.beads[i - 1].pos;
+    }
+    // The first bead follows the head's position
+    this.beads[0].pos = this.pos;
   }
 
   kill() {
