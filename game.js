@@ -31,7 +31,7 @@ function gameInit()
     playerStartPos = vec2(16,8);
 
     player = new Chain(playerStartPos);
-    player.isPlayer = true;
+    // player.isPlayer = true;
 
 }
 

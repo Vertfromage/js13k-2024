@@ -74,7 +74,7 @@ class Chain extends GameObject {
     this.isPlayer = false;
     this.len = 13;
     this.speed = vec2(0.1);
-    this.isMouse = false;
+    this.isMouse = true;
 
     // initialize the array of beads
     this.beads = this.initBeads(this.pos);
