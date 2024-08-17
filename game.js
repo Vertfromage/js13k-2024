@@ -12,6 +12,7 @@ const sound_click = new Sound([1,.5]);
 
 // game variables
 let isMouse = true;
+let player, playerStartPos, spriteAtlas;
 
 // webgl can be disabled to save even more space
 //glEnable = false;
@@ -27,6 +28,11 @@ function gameInit()
     };
 
     cameraPos = vec2(16,8);
+    playerStartPos = vec2(0)
+    player = new Chain(playerStartPos);
+
+
+
 
 }
 

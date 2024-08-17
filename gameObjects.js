@@ -72,15 +72,16 @@ class Chain extends GameObject {
     this.isGameObject = 1;
     this.damageTimer = new Timer();
     this.isPlayer = false;
+    this.len = 13;
 
     // initialize the array of beads
-    this.beads = initBeads()
+    this.beads = this.initBeads(this.pos)
   }
 
   initBeads(pos) {
     let maxOffset = 2; // Max random offset for the curve
 
-    let beads = [...Array(n)].map((_, i) => {
+    let beads = [...Array(this.len)].map((_, i) => {
       // Randomize both x and y with a slight variation to create a curve
       let randomX = Math.sin(i / 2) * maxOffset + Math.random();
       let randomY = Math.cos(i / 2) * maxOffset + Math.random();
