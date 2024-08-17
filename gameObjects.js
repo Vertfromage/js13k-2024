@@ -73,6 +73,8 @@ class Chain extends GameObject {
     this.damageTimer = new Timer();
     this.isPlayer = false;
     this.len = 13;
+    this.speed = vec2(1)
+    this.isMouse = true
 
     // initialize the array of beads
     this.beads = this.initBeads(this.pos)
@@ -111,9 +113,12 @@ class Chain extends GameObject {
   updatePlayerMovement() {
     let direction;
     if (this.isMouse) {
+      console.log("using mouse")
+      console.log(mousePos)
       // Follow mouse/touch input
-      direction = mousePos.sub(this.pos).normalize();
+      direction = mousePos.subtract(this.pos).normalize();
     } else {
+      console.log("using keyboard/gamepad")
       // Use keyboard/gamepad input
       let moveInput = isUsingGamepad
         ? gamepadStick(0)
@@ -123,7 +128,7 @@ class Chain extends GameObject {
     }
 
     // Move the head based on direction and speed
-    this.pos = this.pos.add(direction.mul(speed));
+    this.pos = this.pos.add(direction.multiply(this.speed));
   }
 
   updateAutomatedMovement() {

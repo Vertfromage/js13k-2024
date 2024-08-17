@@ -30,9 +30,7 @@ function gameInit()
     cameraPos = vec2(16,8);
     playerStartPos = vec2(0)
     player = new Chain(playerStartPos);
-
-
-
+    player.isPlayer = true;
 
 }
 
