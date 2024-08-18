@@ -73,8 +73,10 @@ class Chain extends GameObject {
     this.damageTimer = new Timer();
     this.isPlayer = false;
     this.len = 13;
-    this.speed = vec2(0.1);
+    this.speed = vec2(0.2, 0.2); // Initial speed vector pointing right
+    this.defaultSpeed = 0.2; // Speed magnitude
     this.isMouse = true;
+    this.direction
 
     // initialize the array of beads
     this.beads = this.initBeads(this.pos);
@@ -107,11 +109,16 @@ class Chain extends GameObject {
   }
 
   updatePlayerMovement() {
-    let direction;
     if (this.isMouse) {
-      // Follow mouse/touch input
-      direction = mousePos.subtract(this.pos).normalize();
-      // Move the head based on direction and speed
+      // Calculate the direction vector from the player's current position to the mouse position
+      let direction = mousePos.subtract(this.pos);
+        
+      // Normalize the direction vector if it's non-zero
+      if (direction.length() > 0) {
+          direction = direction.normalize();
+      }
+
+      // Move the player's position based on the direction and speed
       this.pos = this.pos.add(direction.multiply(this.speed));
     } else {
       // Use keyboard/gamepad input
@@ -124,9 +131,12 @@ class Chain extends GameObject {
 
       // Only normalize and move if there's input
       if (moveInput.length() > 0) {
-        direction = moveInput.normalize();
+        this.direction = moveInput.normalize();
         // Move the head based on direction and speed
-        this.pos = this.pos.add(direction.multiply(this.speed));
+        this.pos = this.pos.add(this.direction.multiply(this.speed));
+      } else if (this.direction) {
+        // Continue moving in the last known direction if no new input
+        this.pos = this.pos.add(this.direction.multiply(this.speed));
       }
     }
   }
@@ -139,37 +149,33 @@ class Chain extends GameObject {
 
   updateBeadPositions() {
     const beadSpacing = 1; // The fixed distance between beads
-  
+
     if (this.beads.length > 0) {
       this.beads[0].pos = this.pos; // The first bead follows the head's position
     }
-  
+
     for (let i = 1; i < this.beads.length; i++) {
       let prevBead = this.beads[i - 1];
       let currBead = this.beads[i];
-  
+
       // Calculate the vector pointing from the current bead to the previous bead
       let direction = prevBead.pos.subtract(currBead.pos);
-      
+
       // Calculate the distance between the current bead and the previous bead
       let distance = direction.length();
-  
+
       // console.log(`Bead ${i}: prev (${prevBead.pos.x}, ${prevBead.pos.y}), curr (${currBead.pos.x}, ${currBead.pos.y}), distance: ${distance}`);
-  
+
       // If the distance is greater than beadSpacing, move the current bead
       if (distance > beadSpacing) {
         // Normalize the direction to create a unit vector, then scale it to beadSpacing
         direction = direction.normalize().scale(beadSpacing);
-  
+
         // Move the current bead to the correct position at the exact bead spacing
         currBead.pos = prevBead.pos.subtract(direction);
       }
     }
   }
-  
-  
-  
-  
 
   kill() {
     // stop moving

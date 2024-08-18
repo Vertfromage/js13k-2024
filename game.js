@@ -31,7 +31,9 @@ function gameInit()
     playerStartPos = vec2(16,8);
 
     player = new Chain(playerStartPos);
-    // player.isPlayer = true;
+    player.isPlayer = true;
+
+
 
 }
 
@@ -44,14 +46,14 @@ function gameUpdate()
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdatePost()
 {
-
+    cameraPos = player.pos
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender()
 {
     // draw a grey square in the background without using webgl
-    drawRect(vec2(16,8), vec2(20,14), new Color(.6,.6,.6), 0, 0);
+    drawRect(vec2(16,8), vec2(45,30), new Color(.6,.6,.6), 0, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
