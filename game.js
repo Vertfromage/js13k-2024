@@ -11,8 +11,8 @@
 const sound_click = new Sound([1,.5]);
 
 // game variables
-let isMouse = true;
-let player, playerStartPos, spriteAtlas;
+let isMouse = false;
+let player, playerStartPos, spriteAtlas, AI;
 
 // webgl can be disabled to save even more space
 //glEnable = false;
@@ -32,6 +32,10 @@ function gameInit()
 
     player = new Chain(playerStartPos);
     player.isPlayer = true;
+    player.isMouse = isMouse;
+    AI = new Chain(playerStartPos)
+
+    
 
 
 
@@ -60,7 +64,7 @@ function gameRender()
 function gameRenderPost()
 {
     // draw to overlay canvas for hud rendering
-    drawTextScreen('JS13K Games 2024', vec2(mainCanvasSize.x/2, 70), 80);
+    drawTextScreen('JS13K Games 2024', vec2(mainCanvasSize.x/2, 60), 80);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

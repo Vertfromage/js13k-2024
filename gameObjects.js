@@ -76,7 +76,7 @@ class Chain extends GameObject {
     this.speed = vec2(0.2, 0.2); // Initial speed vector pointing right
     this.defaultSpeed = 0.2; // Speed magnitude
     this.isMouse = true;
-    this.direction
+    this.direction;
 
     // initialize the array of beads
     this.beads = this.initBeads(this.pos);
@@ -112,10 +112,10 @@ class Chain extends GameObject {
     if (this.isMouse) {
       // Calculate the direction vector from the player's current position to the mouse position
       let direction = mousePos.subtract(this.pos);
-        
+
       // Normalize the direction vector if it's non-zero
       if (direction.length() > 0) {
-          direction = direction.normalize();
+        direction = direction.normalize();
       }
 
       // Move the player's position based on the direction and speed
@@ -191,3 +191,5 @@ class Chain extends GameObject {
   // 3. chain in active state
   // tell chain to add gold bead + trigger kill on self
 }
+
+
