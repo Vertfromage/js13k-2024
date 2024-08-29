@@ -48,6 +48,136 @@ class GameObject extends EngineObject {
   }
 }
 
+class Grid {
+  constructor(rows, cols) {
+    this.rows = rows;
+    this.cols = cols;
+    this.cells = this.createGrid();
+  }
+
+  createGrid() {
+    let grid = [];
+    for (let y = 0; y < this.rows; y++) {
+      let row = [];
+      for (let x = 0; x < this.cols; x++) {
+        row.push(new Cell(x, y));
+      }
+      grid.push(row);
+    }
+    return grid;
+  }
+
+  getCell(x, y) {
+    if (x >= 0 && x < this.cols && y >= 0 && y < this.rows) {
+      return this.cells[y][x];
+    }
+    return null;
+  }
+
+  updateOccupiedCells(chains) {
+    // First, reset all cells to be walkable
+    for (let row of this.cells) {
+      for (let cell of row) {
+        cell.walkable = true; // Default to walkable
+      }
+    }
+
+    for (let chain of chains) {
+      // Now, mark cells occupied by beads as non-walkable
+      for (let bead of chain.beads) {
+        let x = Math.floor(bead.pos.x);
+        let y = Math.floor(bead.pos.y);
+        let cell = this.getCell(x, y);
+        if (cell) {
+          cell.walkable = false;
+        }
+      }
+    }
+  }
+}
+
+function aStar(grid, start, goal) {
+  // console.log("grid, start, goal", grid, start, goal);
+  let openList = [start];
+  let closedList = [];
+
+  while (openList.length > 0) {
+    let current = openList.reduce((prev, curr) =>
+      prev.f < curr.f ? prev : curr
+    );
+
+    if (current === goal) {
+      let path = [];
+      while (current.parent) {
+        path.push(current);
+        current = current.parent;
+      }
+      return path.reverse(); // Return the path from start to goal
+    }
+
+    openList = openList.filter((cell) => cell !== current);
+    closedList.push(current);
+
+    let neighbors = getNeighbors(grid, current);
+    for (let neighbor of neighbors) {
+      if (closedList.includes(neighbor) || !neighbor.walkable) {
+        continue;
+      }
+
+      let tentativeG = current.g + 1; // Assume distance between neighbors is 1
+      if (!openList.includes(neighbor) || tentativeG < neighbor.g) {
+        neighbor.parent = current;
+        neighbor.g = tentativeG;
+        neighbor.h = heuristic(neighbor, goal);
+        neighbor.f = neighbor.g + neighbor.h;
+
+        if (!openList.includes(neighbor)) {
+          openList.push(neighbor);
+        }
+      }
+    }
+  }
+
+  return []; // No path found
+}
+
+function heuristic(cell, goal) {
+  // Manhattan distance (assuming 4-directional movement)
+  console.log("Cell and goal", cell, goal);
+  return Math.abs(cell.x - goal.x) + Math.abs(cell.y - goal.y);
+}
+
+function getNeighbors(grid, cell) {
+  let neighbors = [];
+  let directions = [
+    { x: 0, y: -1 },
+    { x: 1, y: 0 },
+    { x: 0, y: 1 },
+    { x: -1, y: 0 },
+  ];
+
+  for (let dir of directions) {
+    let neighbor = grid.getCell(cell.x + dir.x, cell.y + dir.y);
+    if (neighbor) {
+      neighbors.push(neighbor);
+    }
+  }
+
+  return neighbors;
+}
+
+class Cell {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.walkable = true;
+    this.parent = null;
+    this.g = 0; // Cost from start to this cell
+    this.h = 0; // Heuristic estimate of cost to goal
+    this.f = 0; // g + h
+  }
+}
+
 // individual portion of a chain
 class Bead extends GameObject {
   constructor(pos) {
@@ -77,6 +207,7 @@ class Chain extends GameObject {
     this.defaultSpeed = 0.2; // Speed magnitude
     this.isMouse = true;
     this.direction;
+    this.targetPos = vec2(0, 0);
 
     // initialize the array of beads
     this.beads = this.initBeads(this.pos);
@@ -142,9 +273,28 @@ class Chain extends GameObject {
   }
 
   updateAutomatedMovement() {
-    // Example AI: Move the chain in a circle or towards a target => needs work
-    let targetPos = vec2(Math.cos(time) * 10, Math.sin(time) * 10);
-    this.pos = this.pos.lerp(targetPos, 0.05); // Gradual movement towards the target
+    // Convert snake's current position and target position to grid cells
+    console.log("grid",grid)
+    let startCell = grid.getCell(
+      Math.floor(this.pos.x),
+      Math.floor(this.pos.y)
+    );
+    console.log("start cell", startCell)
+    console.log("targetPos", this.targetPos)
+    let goalCell = grid.getCell(this.targetPos.x, this.targetPos.y);
+    console.log("goal cell",goalCell)
+
+    // Find the path using A*
+    let path = aStar(grid, startCell, goalCell);
+
+    // If a path exists, move towards the next cell in the path
+    if (path.length > 0) {
+      let nextCell = path[0];
+      let direction = vec2(nextCell.x, nextCell.y)
+        .subtract(this.pos)
+        .normalize();
+      this.pos = this.pos.add(direction.multiply(this.speed));
+    }
   }
 
   updateBeadPositions() {
@@ -191,5 +341,3 @@ class Chain extends GameObject {
   // 3. chain in active state
   // tell chain to add gold bead + trigger kill on self
 }
-
-

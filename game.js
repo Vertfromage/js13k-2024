@@ -12,7 +12,10 @@ const sound_click = new Sound([1,.5]);
 
 // game variables
 let isMouse = false;
-let player, playerStartPos, spriteAtlas, AI;
+let player, playerStartPos, spriteAtlas, AI, chains, beads, grid;
+
+let gridRows = 30; // Example: number of cells vertically
+let gridCols = 45; // Example: number of cells horizontally
 
 // webgl can be disabled to save even more space
 //glEnable = false;
@@ -20,6 +23,10 @@ let player, playerStartPos, spriteAtlas, AI;
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
+    // To keep track of all chains
+    chains = []
+    // to help with AI movement
+    grid = new Grid(gridRows, gridCols);
     // create a table of all sprites
     spriteAtlas =
     {
@@ -28,12 +35,20 @@ function gameInit()
     };
 
     cameraPos = vec2(16,8);
-    playerStartPos = vec2(16,8);
 
+    // initialize player
+    playerStartPos = vec2(16,8);
     player = new Chain(playerStartPos);
     player.isPlayer = true;
     player.isMouse = isMouse;
+    chains.push(player)
+
+    // Initialize AI
     AI = new Chain(playerStartPos)
+    AI.targetPos = player.pos // change this..
+    chains.push(AI);
+
+
 
     
 
@@ -44,7 +59,8 @@ function gameInit()
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdate()
 {
-
+    grid.updateOccupiedCells(chains);
+    AI.targetPos = player.pos // temp
 }
 
 ///////////////////////////////////////////////////////////////////////////////
