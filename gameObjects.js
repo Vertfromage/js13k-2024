@@ -53,6 +53,7 @@ class Grid {
     this.rows = rows;
     this.cols = cols;
     this.cells = this.createGrid();
+    this.currentChainId = null; // Track the current chain being processed
   }
 
   createGrid() {
@@ -68,113 +69,88 @@ class Grid {
   }
 
   getCell(x, y) {
-    if (x >= 0 && x < this.cols && y >= 0 && y < this.rows) {
-      return this.cells[y][x];
-    }
-    return null;
+    // Ensure x and y are within the grid bounds
+    if (x < 0) x = 0;
+    if (x >= this.cols) x = this.cols - 1;
+    if (y < 0) y = 0;
+    if (y >= this.rows) y = this.rows - 1;
+
+    return this.cells[y][x];
   }
 
   updateOccupiedCells(chains) {
-    // First, reset all cells to be walkable
+    // Reset all cells to be walkable with a normal cost
     for (let row of this.cells) {
       for (let cell of row) {
         cell.walkable = true; // Default to walkable
+        cell.cost = 1; // Default movement cost
       }
     }
 
     for (let chain of chains) {
-      // Now, mark cells occupied by beads as non-walkable
       for (let bead of chain.beads) {
         let x = Math.floor(bead.pos.x);
         let y = Math.floor(bead.pos.y);
         let cell = this.getCell(x, y);
         if (cell) {
-          cell.walkable = false;
-        }
-      }
-    }
-  }
-}
-
-function aStar(grid, start, goal) {
-  // console.log("grid, start, goal", grid, start, goal);
-  let openList = [start];
-  let closedList = [];
-
-  while (openList.length > 0) {
-    let current = openList.reduce((prev, curr) =>
-      prev.f < curr.f ? prev : curr
-    );
-
-    if (current === goal) {
-      let path = [];
-      while (current.parent) {
-        path.push(current);
-        current = current.parent;
-      }
-      return path.reverse(); // Return the path from start to goal
-    }
-
-    openList = openList.filter((cell) => cell !== current);
-    closedList.push(current);
-
-    let neighbors = getNeighbors(grid, current);
-    for (let neighbor of neighbors) {
-      if (closedList.includes(neighbor) || !neighbor.walkable) {
-        continue;
-      }
-
-      let tentativeG = current.g + 1; // Assume distance between neighbors is 1
-      if (!openList.includes(neighbor) || tentativeG < neighbor.g) {
-        neighbor.parent = current;
-        neighbor.g = tentativeG;
-        neighbor.h = heuristic(neighbor, goal);
-        neighbor.f = neighbor.g + neighbor.h;
-
-        if (!openList.includes(neighbor)) {
-          openList.push(neighbor);
+          cell.cost = chain.id === this.currentChainId ? 0 : 10;
+          cell.walkable =
+            chain.id === this.currentChainId || cell.cost === 10 ? true : false;
         }
       }
     }
   }
 
-  return []; // No path found
+  // New method to get neighbors of a cell
+  getNeighbors(cell) {
+    let neighbors = [];
+    let directions = [
+      { x: 0, y: -1 }, // Up
+      { x: 1, y: 0 }, // Right
+      { x: 0, y: 1 }, // Down
+      { x: -1, y: 0 }, // Left
+    ];
+
+    for (let dir of directions) {
+      let neighborX = cell.x + dir.x;
+      let neighborY = cell.y + dir.y;
+
+      // Ensure the neighbor is within grid bounds
+      if (
+        neighborX >= 0 &&
+        neighborX < this.cols &&
+        neighborY >= 0 &&
+        neighborY < this.rows
+      ) {
+        let neighbor = this.getCell(neighborX, neighborY);
+        if (neighbor) {
+          neighbors.push(neighbor);
+        }
+      }
+    }
+
+    return neighbors;
+  }
 }
 
 function heuristic(cell, goal) {
-  // Manhattan distance (assuming 4-directional movement)
-  console.log("Cell and goal", cell, goal);
+  // Manhattan distance
   return Math.abs(cell.x - goal.x) + Math.abs(cell.y - goal.y);
 }
 
-function getNeighbors(grid, cell) {
-  let neighbors = [];
-  let directions = [
-    { x: 0, y: -1 },
-    { x: 1, y: 0 },
-    { x: 0, y: 1 },
-    { x: -1, y: 0 },
-  ];
-
-  for (let dir of directions) {
-    let neighbor = grid.getCell(cell.x + dir.x, cell.y + dir.y);
-    if (neighbor) {
-      neighbors.push(neighbor);
-    }
-  }
-
-  return neighbors;
-}
+// diagonal
+// function heuristic(cell, goal) {
+//   // Euclidean distance
+//   return Math.sqrt(Math.pow(cell.x - goal.x, 2) + Math.pow(cell.y - goal.y, 2));
+// }
 
 class Cell {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.walkable = true;
-    this.parent = null;
-    this.g = 0; // Cost from start to this cell
-    this.h = 0; // Heuristic estimate of cost to goal
-    this.f = 0; // g + h
+    this.walkable = true; // Whether the cell is walkable or not
+    this.cost = 1; // Movement cost (can still be used if needed)
+    this.parent = null; // No longer needed but can be kept for reference
   }
 }
 
@@ -194,11 +170,14 @@ class Bead extends GameObject {
   // gold - stay in position to be collected by head of other chain
 }
 
+let chainIdCounter = 0;
+
 // the chains/snakes
 class Chain extends GameObject {
   constructor(pos) {
     super(pos, vec2(1), spriteAtlas.square, 0);
     this.health = 0;
+    this.id = chainIdCounter++; // Assign a unique ID to each chain
     this.isGameObject = 1;
     this.damageTimer = new Timer();
     this.isPlayer = false;
@@ -273,27 +252,58 @@ class Chain extends GameObject {
   }
 
   updateAutomatedMovement() {
-    // Convert snake's current position and target position to grid cells
-    console.log("grid",grid)
     let startCell = grid.getCell(
       Math.floor(this.pos.x),
       Math.floor(this.pos.y)
     );
-    console.log("start cell", startCell)
-    console.log("targetPos", this.targetPos)
-    let goalCell = grid.getCell(this.targetPos.x, this.targetPos.y);
-    console.log("goal cell",goalCell)
 
-    // Find the path using A*
-    let path = aStar(grid, startCell, goalCell);
+    if (!startCell) {
+      console.log("No Start cell!");
+      return;
+    }
+    let goalX = Math.floor(this.targetPos.x);
+    let goalY = Math.floor(this.targetPos.y);
 
-    // If a path exists, move towards the next cell in the path
-    if (path.length > 0) {
-      let nextCell = path[0];
-      let direction = vec2(nextCell.x, nextCell.y)
+    // Check if the target position is within grid bounds
+    if (goalX < 0 || goalX >= grid.cols || goalY < 0 || goalY >= grid.rows) {
+      console.warn("Target position is out of bounds:", this.targetPos);
+      return; // Abort the movement if the goal is out of bounds
+    }
+
+    let goalCell = grid.getCell(goalX, goalY);
+
+    // If the goal cell is invalid or not walkable, handle accordingly
+    if (!goalCell || !goalCell.walkable) {
+      console.warn("Goal cell is invalid or not walkable.");
+      return;
+    }
+
+    let neighbors = grid.getNeighbors(startCell);
+
+    // Find the neighbor with the smallest heuristic (closest to the goal)
+    let bestNeighbor = null;
+    let bestHeuristic = Infinity;
+
+    for (let neighbor of neighbors) {
+      if (neighbor && neighbor.walkable) {
+        // Ensure neighbor is not null
+        let heuristicValue = heuristic(neighbor, goalCell);
+        if (heuristicValue < bestHeuristic) {
+          bestHeuristic = heuristicValue;
+          bestNeighbor = neighbor;
+        }
+      }
+    }
+
+    // Move towards the best neighbor
+    if (bestNeighbor) {
+      let direction = vec2(bestNeighbor.x, bestNeighbor.y)
         .subtract(this.pos)
         .normalize();
+
       this.pos = this.pos.add(direction.multiply(this.speed));
+    } else {
+      console.warn("No valid moves found.");
     }
   }
 
