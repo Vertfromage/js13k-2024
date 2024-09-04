@@ -6,17 +6,19 @@ In this game, players control a "snake" represented by a chain of 13 beads plus 
 ### Gameplay Logic:
 1. **Snake Chain Mechanics:**
    - **Initial State:** Each snake starts with 13 translucent beads and a head.
-   - **Becoming Opaque:** When another snake crosses the player’s path, one of the player’s translucent beads becomes opaque.
-   - **Full Chain Effect:** Once the player’s snake has 13 opaque beads, all beads start glowing, and the snake's speed increases. At this stage, any other snake that crosses the player's path loses all its opaque beads.
-   - **Gold Beads:** When the player destroys another snake, a gold bead is added to the head of the player’s snake. The destroyed snake loses all its beads (opaque and translucent), and the gold beads are scattered on the board, available for collection.
+   - **Becoming Opaque:** When another snake collects a fruit, one of the player’s translucent beads becomes opaque.
+   - **Full Chain Effect:** Once the player’s snake has 13 opaque beads, all beads start glowing, and the snake's speed increases and it can pass through all other snakes, then it turns translucent again.
+   - **Gold Beads:** When the player collects 13 beads a gold bead is added to the head of the player’s snake.
+   - **Diamond beads** When the player collects 13 gold beads they get replaced by a diamond bead. 
+   - **Collisions** The destroyed snake loses all its beads (opaque and translucent), and the gold beads are scattered on the board, available for collection.
 
 2. **Board and Environment:**
    - **Visuals:** The board has a top-down view with a semi-opaque pseudo-3D appearance, featuring a marble texture.
    - **Particle Effects:** Clouds of particles drift across the board, adding a dynamic element to the environment.
-   - **Falling Beads:** When a chain is destroyed, its beads fall through the board, creating a visually striking effect.
+   - **Falling Beads:** When a chain is destroyed, its opaque beads fall through the board, creating a visually striking effect.
 
 3. **Scoring and Objectives:**
-   - **Collect Beads:** The main goal is to collect as many opaque and gold beads as possible while avoiding losing your own. Collect an opaque bead if a snake crosses your path while your chain is still translucent
+   - **Collect Beads:** The main goal is to collect as many opaque and gold beads as possible while avoiding losing your own. Collect an opaque bead when you eat a fruit.
    - **Defeat Opponents:** Destroy other snakes by making them run into you when you have a glowing, full chain of opaque beads.
 
 4. **AI and Multiplayer:**
