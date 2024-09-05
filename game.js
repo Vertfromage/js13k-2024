@@ -45,7 +45,7 @@ function gameInit() {
   // Initialize AI
   let aiStartPos = vec2(10, 8); // Example starting position for AI
   AI = new Chain(aiStartPos);
-  //   AI.targetPos = vec2(0,0)
+  // AI.targetPos = vec2(25,15)
   AI.targetPos = player.pos;
   chains.push(AI);
 }
@@ -55,7 +55,7 @@ function gameUpdate() {
   grid.currentChainId = AI.id;
   grid.updateOccupiedCells(chains);
   // Update AI's target position to follow the player (change later)
-    AI.targetPos = player.pos;
+  AI.targetPos = player.pos;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -66,15 +66,15 @@ function gameUpdatePost() {
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender() {
   // draw a grey square in the background without using webgl
-  drawRect(vec2(16, 8), vec2(45, 30), new Color(0.6, 0.6, 0.6), 0, 0);
-
-  // grid.renderDiagnostics(1);
+  drawRect(vec2(25, 15), vec2(45, 30), new Color(0.6, 0.6, 0.6), 0, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost() {
   // draw to overlay canvas for hud rendering
   drawTextScreen("JS13K Games 2024", vec2(mainCanvasSize.x / 2, 60), 80);
+  console.log("AI Position:", AI.pos);
+  console.log("Player Position:", player.pos);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

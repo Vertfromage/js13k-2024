@@ -1,5 +1,9 @@
 "use strict";
 
+let isPaused = false;
+let pauseKeyPressed = false;
+let currentGoal, currentBestNeighbor;
+
 // Source platformer example
 class GameObject extends EngineObject {
   constructor(pos, size, tileInfo, angle) {
@@ -48,6 +52,13 @@ class GameObject extends EngineObject {
   }
 }
 
+const xMin = 2.5;
+const xMax = 47.5;
+const yMin = 0;
+const yMax = 30;
+const gridWidth = 45,
+  gridHeight = 30;
+
 class Grid {
   constructor(rows, cols) {
     this.rows = rows;
@@ -78,6 +89,30 @@ class Grid {
     return this.cells[y][x];
   }
 
+  mapToGrid(newPos) {
+    // Normalize the real-world x and y to the range [0, 1]
+    const normalizedX = (newPos.x - xMin) / (xMax - xMin);
+    const normalizedY = (newPos.y - yMin) / (yMax - yMin);
+
+    // Map to the grid coordinates
+    let x = Math.floor(normalizedX * (gridWidth - 1));
+    let y = Math.floor(normalizedY * (gridHeight - 1));
+
+    return { x, y };
+  }
+
+  mapFromGrid(gridPos) {
+    // Map the grid coordinates back to the normalized range [0, 1]
+    const normalizedX = gridPos.x / (gridWidth - 1);
+    const normalizedY = gridPos.y / (gridHeight - 1);
+
+    // Map the normalized values back to the real-world coordinates
+    const realX = normalizedX * (xMax - xMin) + xMin;
+    const realY = normalizedY * (yMax - yMin) + yMin;
+
+    return { x: realX, y: realY };
+  }
+
   updateOccupiedCells(chains) {
     // Reset all cells to be walkable with a normal cost
     for (let row of this.cells) {
@@ -89,13 +124,19 @@ class Grid {
 
     for (let chain of chains) {
       for (let bead of chain.beads) {
-        let x = Math.floor(bead.pos.x);
-        let y = Math.floor(bead.pos.y);
-        let cell = this.getCell(x, y);
-        if (cell) {
-          cell.cost = chain.id === this.currentChainId ? 0 : 10;
-          cell.walkable =
-            chain.id === this.currentChainId || cell.cost === 10 ? true : false;
+        // Map real-world coordinates to grid coordinates
+        let gridPos = this.mapToGrid(bead.pos);
+        if (!gridPos.x || !gridPos.y) {
+          // console.log("ERROR! ", gridPos);
+        } else {
+          let cell = this.getCell(gridPos.x, gridPos.y);
+          if (cell) {
+            cell.cost = chain.id === this.currentChainId ? 0 : 10;
+            cell.walkable =
+              chain.id === this.currentChainId || cell.cost === 10
+                ? true
+                : false;
+          }
         }
       }
     }
@@ -122,10 +163,8 @@ class Grid {
         neighborY >= 0 &&
         neighborY < this.rows
       ) {
-        let neighbor = this.getCell(neighborX, neighborY);
-        if (neighbor) {
-          neighbors.push(neighbor);
-        }
+        // No need to check for null, since bounds are already handled by getCell
+        neighbors.push(this.getCell(neighborX, neighborY));
       }
     }
 
@@ -206,6 +245,21 @@ class Chain extends GameObject {
   }
 
   update() {
+    // Check if "P" is pressed and only toggle if the key wasn't pressed before
+    if (keyIsDown("Space") && !pauseKeyPressed) {
+      isPaused = !isPaused; // Toggle the paused state
+      pauseKeyPressed = true; // Mark the key as pressed
+    }
+
+    // Reset the pause key pressed state once "P" is released
+    if (!keyIsDown("Space")) {
+      pauseKeyPressed = false;
+    }
+
+    // If the game is paused, do not allow the player to move
+    if (isPaused) {
+      return;
+    }
     super.update();
 
     if (this.isPlayer) {
@@ -219,74 +273,68 @@ class Chain extends GameObject {
   }
 
   updatePlayerMovement() {
-    if (this.isMouse) {
-      // Calculate the direction vector from the player's current position to the mouse position
-      let direction = mousePos.subtract(this.pos);
+    let newPos = this.pos; // Track the new position for boundary checks
 
-      // Normalize the direction vector if it's non-zero
+    if (this.isMouse) {
+      let direction = mousePos.subtract(this.pos);
       if (direction.length() > 0) {
         direction = direction.normalize();
       }
-
-      // Move the player's position based on the direction and speed
-      this.pos = this.pos.add(direction.multiply(this.speed));
+      newPos = this.pos.add(direction.multiply(this.speed));
     } else {
-      // Use keyboard/gamepad input
       let moveInput = isUsingGamepad
         ? gamepadStick(0)
         : vec2(
             keyIsDown("ArrowRight") - keyIsDown("ArrowLeft"),
             keyIsDown("ArrowUp") - keyIsDown("ArrowDown")
           );
-
-      // Only normalize and move if there's input
       if (moveInput.length() > 0) {
         this.direction = moveInput.normalize();
-        // Move the head based on direction and speed
-        this.pos = this.pos.add(this.direction.multiply(this.speed));
+        newPos = this.pos.add(this.direction.multiply(this.speed));
       } else if (this.direction) {
-        // Continue moving in the last known direction if no new input
-        this.pos = this.pos.add(this.direction.multiply(this.speed));
+        newPos = this.pos.add(this.direction.multiply(this.speed));
       }
     }
+
+    // Apply boundary checks before updating the player's position
+    newPos.x = Math.max(2.5, Math.min(newPos.x, 47.5)); // Constrain X
+    newPos.y = Math.max(0, Math.min(newPos.y, 30)); // Constrain Y
+
+    this.pos = newPos; // Only update the position if it's within bounds
   }
 
   updateAutomatedMovement() {
-    let startCell = grid.getCell(
-      Math.floor(this.pos.x),
-      Math.floor(this.pos.y)
-    );
+    // Get the current position of the AI in grid coordinates
+    let gridStart = grid.mapToGrid(this.pos);
+    let startCell = grid.getCell(gridStart.x, gridStart.y);
 
+    // Check if the start cell is valid
     if (!startCell) {
       console.log("No Start cell!");
       return;
     }
-    let goalX = Math.floor(this.targetPos.x);
-    let goalY = Math.floor(this.targetPos.y);
+    let gridGoal = grid.mapToGrid(this.targetPos);
 
-    // Check if the target position is within grid bounds
-    if (goalX < 0 || goalX >= grid.cols || goalY < 0 || goalY >= grid.rows) {
-      console.warn("Target position is out of bounds:", this.targetPos);
-      return; // Abort the movement if the goal is out of bounds
-    }
+    // Get the goal cell based on the clamped target position
+    let goalCell = grid.getCell(gridGoal.x, gridGoal.y);
 
-    let goalCell = grid.getCell(goalX, goalY);
-
-    // If the goal cell is invalid or not walkable, handle accordingly
+    // If the goal cell is invalid or not walkable, abort movement
     if (!goalCell || !goalCell.walkable) {
       console.warn("Goal cell is invalid or not walkable.");
       return;
     }
 
+    // Get the neighbors of the current start cell
     let neighbors = grid.getNeighbors(startCell);
 
     // Find the neighbor with the smallest heuristic (closest to the goal)
     let bestNeighbor = null;
     let bestHeuristic = Infinity;
 
+    //Greedy Algorithm
     for (let neighbor of neighbors) {
       if (neighbor && neighbor.walkable) {
-        // Ensure neighbor is not null
+        // Calculate the heuristic value for each neighbor (distance to goal)
         let heuristicValue = heuristic(neighbor, goalCell);
         if (heuristicValue < bestHeuristic) {
           bestHeuristic = heuristicValue;
@@ -295,12 +343,15 @@ class Chain extends GameObject {
       }
     }
 
-    // Move towards the best neighbor
+    // Move towards the best neighbor (closest to the goal)
     if (bestNeighbor) {
-      let direction = vec2(bestNeighbor.x, bestNeighbor.y)
+      console.log("BestNeighbor: ", bestNeighbor);
+      let neighborPos = grid.mapFromGrid(bestNeighbor);
+      let direction = vec2(neighborPos.x, neighborPos.y)
         .subtract(this.pos)
         .normalize();
 
+      // Update the AI's position by moving in the direction of the best neighbor
       this.pos = this.pos.add(direction.multiply(this.speed));
     } else {
       console.warn("No valid moves found.");
